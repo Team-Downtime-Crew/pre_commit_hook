@@ -1,0 +1,51 @@
+# .github/workflows/check-author-on-pr.yaml
+name: "Check Commit Authors"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-commit-authors:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Needed to fetch full history and commits
+
+      - name: Check commit authors
+        run: |
+          echo "✅ Checking commit authors..."
+          ALLOWED_EMAILS=("ds705589@gmail.com" "ys716123@gmail.com")
+
+          UNAUTHORIZED=0
+
+          # Get all commit emails in the PR
+          COMMIT_EMAILS=$(git log origin/main..HEAD --pretty=format:'%ae')
+
+          for email in $COMMIT_EMAILS; do
+            echo "🔍 Commit by: $email"
+            ALLOWED=false
+
+            for allowed in "${ALLOWED_EMAILS[@]}"; do
+              if [[ "$email" == "$allowed" ]]; then
+                ALLOWED=true
+                break
+              fi
+            done
+
+            if [[ "$ALLOWED" == false ]]; then
+              echo "❌ Unauthorized commit by: $email"
+              UNAUTHORIZED=1
+            fi
+          done
+
+          if [[ "$UNAUTHORIZED" -eq 1 ]]; then
+            echo "❌ PR contains unauthorized commits. Rejecting."
+            exit 1
+          else
+            echo "✅ All commits are from authorized users."
+          fi
+
